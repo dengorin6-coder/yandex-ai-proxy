@@ -22,7 +22,6 @@ def home():
         "message": "Yandex AI Proxy работает"
     })
 
-
 # --- Проверка здоровья сервиса ---
 @app.route('/health', methods=['GET'])
 def health():
