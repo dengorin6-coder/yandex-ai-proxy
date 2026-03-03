@@ -14,7 +14,7 @@ YANDEX_MODEL_URI = os.environ.get(
 conversations = {}
 
 
-# --- Главная страница ---
+# Главная страница
 @app.route('/', methods=['GET'])
 def home():
     return jsonify({
@@ -22,22 +22,27 @@ def home():
         "message": "Yandex AI Proxy работает"
     })
 
-# --- Проверка здоровья сервиса ---
+
+# Проверка здоровья сервиса
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({"status": "ok"})
 
 
-# --- Убираем 404 на favicon ---
+# Чтобы убрать 404 на favicon
 @app.route('/favicon.ico')
 def favicon():
     return ('', 204)
 
 
-# --- Чат ---
+# Чат
 @app.route('/chat', methods=['POST'])
 def chat():
-    data = request.json
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "Invalid JSON"}), 400
+
     user_id = data.get('user_id', 'default')
     message = data.get('message')
 
@@ -47,7 +52,10 @@ def chat():
     if user_id not in conversations:
         conversations[user_id] = []
 
-    conversations[user_id].append({"role": "user", "text": message})
+    conversations[user_id].append({
+        "role": "user",
+        "text": message
+    })
 
     payload = {
         "modelUri": YANDEX_MODEL_URI,
@@ -60,7 +68,8 @@ def chat():
 
     headers = {
         "Authorization": f"Api-Key {YANDEX_GPT_KEY}",
-        "x-folder-id": YANDEX_FOLDER_ID
+        "x-folder-id": YANDEX_FOLDER_ID,
+        "Content-Type": "application/json"
     }
 
     response = requests.post(
@@ -78,11 +87,14 @@ def chat():
     result = response.json()
     answer = result['result']['alternatives'][0]['message']['text']
 
-    conversations[user_id].append({"role": "assistant", "text": answer})
+    conversations[user_id].append({
+        "role": "assistant",
+        "text": answer
+    })
 
     return jsonify({"answer": answer})
 
 
 if __name__ == '__main__':
-    # Для локального запуска
+    # Локальный запуск
     app.run(host='0.0.0.0', port=8080)
